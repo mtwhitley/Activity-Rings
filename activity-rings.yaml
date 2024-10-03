@@ -1,0 +1,136 @@
+esphome:
+  name: activity-rings
+  friendly_name: Activity Rings
+
+esp32:
+  board: esp32dev
+  framework:
+    type: arduino
+
+# Enable logging
+logger:
+
+# Enable Home Assistant API
+api:
+  encryption:
+    key: 
+
+ota:
+  - platform: esphome
+    password: 
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+
+  ap:
+    ssid: 
+    password: 
+
+captive_portal:
+
+sensor:
+  - platform: homeassistant
+    name: "Move"
+    entity_id:
+    id: move_ha
+  - platform: homeassistant
+    name: "Stand"
+    entity_id: 
+    id: stand_ha
+  - platform: homeassistant
+    name: "Exercise"
+    entity_id: 
+    id: exercise_ha
+  - platform: homeassistant
+    name: "Initial Brightness"
+    entity_id: 
+    id: brightness_ha
+
+light:
+  - platform: fastled_clockless
+    chipset: WS2812
+    pin: GPIO13
+    num_leds: 171
+    rgb_order: GRB
+    id: ar_display
+    name: "Display"
+
+    on_turn_on:
+      then:
+        - light.control:
+            id: ar_display
+            effect: Calculate
+            brightness: !lambda |-
+              return id(brightness_ha).state / 100;
+
+    effects:
+      - addressable_lambda:
+          name: "Calculate"
+          lambda: |-
+
+            float move_percentage     = id(move_ha).state;
+            float exercise_percentage = id(exercise_ha).state;
+            float stand_percentage    = id(stand_ha).state;
+
+            int move_start = 0;
+            int move_end   = 90;
+            int exe_start  = 91;
+            int exe_end    = 147;
+            int stnd_start = 148;
+            int stnd_end   = 171;
+
+            int move_leds  = move_end - move_start;
+            int exe_leds   = exe_end - exe_start;
+            int stnd_leds  = stnd_end - stnd_start;
+
+            // Move
+            if (isnan(move_percentage) || move_percentage < 2) {
+              move_percentage = 2;
+            }
+
+            // The number of move leds to light up
+            int m_leds = int(move_leds*move_percentage/100.0);
+            int m_lit  = move_start + m_leds;
+
+            // Set to the move color
+            it.range(move_start, m_lit) = ESPColor(250,17,79);
+
+            // Turn off the remaining leds
+            if (m_lit+1 < move_end) {
+              it.range(m_lit+1, move_end) = ESPColor::BLACK;
+            }
+
+            // Exercise 
+            if (isnan(exercise_percentage) || exercise_percentage < 2) {
+              exercise_percentage = 2;
+            }
+
+            // The number of exercise leds to light up
+            int e_leds = int(exe_leds*exercise_percentage/100.0);
+            int exe_lit = exe_start + e_leds;
+
+            // Set to the exercise color
+            it.range(exe_start, exe_lit) = ESPColor(166,255,0);
+
+            // Turn off the remaining leds
+            if (exe_lit+1 < exe_end) {
+              it.range(exe_lit+1, exe_end) = ESPColor::BLACK;
+            }
+
+            // Stand 
+            if (isnan(stand_percentage) || stand_percentage < 5) {
+              stand_percentage = 5;
+            }
+
+            // The number of stand leds to light up
+            int s_leds = int(stnd_leds*stand_percentage/100.0);
+            int s_lit  = stnd_start + s_leds;
+
+            // Set to the stand color
+            it.range(stnd_start, s_lit) = ESPColor(0,255,246);
+
+            // Turn off the remaining leds
+            if (s_lit+1 < stnd_end) {
+              it.range(s_lit+1, stnd_end) = ESPColor::BLACK;
+            }
