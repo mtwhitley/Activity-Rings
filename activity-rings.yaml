@@ -13,38 +13,32 @@ logger:
 # Enable Home Assistant API
 api:
   encryption:
-    key: 
+    key: ""
 
 ota:
   - platform: esphome
-    password: 
+    password: ""
 
 wifi:
   ssid: !secret wifi_ssid
   password: !secret wifi_password
 
-  ap:
-    ssid: 
-    password: 
-
-captive_portal:
-
 sensor:
   - platform: homeassistant
     name: "Move"
-    entity_id:
+    entity_id: input_number.michael_move_progress
     id: move_ha
   - platform: homeassistant
     name: "Stand"
-    entity_id: 
+    entity_id: input_number.michael_stand_progress
     id: stand_ha
   - platform: homeassistant
     name: "Exercise"
-    entity_id: 
+    entity_id: input_number.michael_exercise_progress
     id: exercise_ha
   - platform: homeassistant
-    name: "Initial Brightness"
-    entity_id: 
+    name: "Brightness"
+    entity_id: input_number.activity_ring_brightness
     id: brightness_ha
 
 light:
@@ -62,7 +56,7 @@ light:
             id: ar_display
             effect: Calculate
             brightness: !lambda |-
-              return id(brightness_ha).state / 100;
+              return id(brightness_ha).state;
 
     effects:
       - addressable_lambda:
@@ -72,6 +66,7 @@ light:
             float move_percentage     = id(move_ha).state;
             float exercise_percentage = id(exercise_ha).state;
             float stand_percentage    = id(stand_ha).state;
+            float brightness          = id(brightness_ha).state;
 
             int move_start = 0;
             int move_end   = 90;
@@ -79,6 +74,16 @@ light:
             int exe_end    = 147;
             int stnd_start = 148;
             int stnd_end   = 171;
+
+            int move_r  = 250 * brightness;
+            int move_g  = 17 * brightness;
+            int move_b  = 79 * brightness;
+            int exe_r   = 166 * brightness;
+            int exe_g   = 255 * brightness;
+            int exe_b   = 0 * brightness;
+            int stand_r = 0 * brightness;
+            int stand_g = 255 * brightness;
+            int stand_b = 246 * brightness;
 
             int move_leds  = move_end - move_start;
             int exe_leds   = exe_end - exe_start;
@@ -94,7 +99,7 @@ light:
             int m_lit  = move_start + m_leds;
 
             // Set to the move color
-            it.range(move_start, m_lit) = ESPColor(250,17,79);
+            it.range(move_start, m_lit) = ESPColor(move_r,move_g,move_b);
 
             // Turn off the remaining leds
             if (m_lit+1 < move_end) {
@@ -111,7 +116,7 @@ light:
             int exe_lit = exe_start + e_leds;
 
             // Set to the exercise color
-            it.range(exe_start, exe_lit) = ESPColor(166,255,0);
+            it.range(exe_start, exe_lit) = ESPColor(exe_r,exe_g,exe_b);
 
             // Turn off the remaining leds
             if (exe_lit+1 < exe_end) {
@@ -128,7 +133,7 @@ light:
             int s_lit  = stnd_start + s_leds;
 
             // Set to the stand color
-            it.range(stnd_start, s_lit) = ESPColor(0,255,246);
+            it.range(stnd_start, s_lit) = ESPColor(stand_r,stand_g,stand_b);
 
             // Turn off the remaining leds
             if (s_lit+1 < stnd_end) {
